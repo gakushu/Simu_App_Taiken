@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>止まるまでの距離を測ってみよう｜大人のための物理入門ガイド</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --navy: #1a1a56; --blue: #1a33bb; --blue2: #4488ff; --orange: #ff8844; --amber: #cc8800;
+  --ink: #222244; --muted: #5566aa; --line: #dde3ff; --bg: #f5f7ff; --card: #ffffff;
+  --c1: #2a66e8; --c2: #e8663a; --c3: #16a05a;
+}
+body { background: var(--bg); color: var(--ink); font-family: 'Segoe UI','Yu Gothic UI','Meiryo UI','Hiragino Sans',sans-serif; font-size: 16px; line-height: 1.7; }
+header { background: linear-gradient(135deg, #141440 0%, #1a1a56 55%, #141440 100%); color: #fff; border-bottom: 2px solid #4455bb; }
+header .h-in { max-width: 1180px; margin: 0 auto; padding: 12px 16px; display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; }
+header .h-sub { font-size: 12px; opacity: .8; letter-spacing: .08em; }
+header .h-title { font-size: 21px; font-weight: bold; }
+header .h-note { font-size: 12px; opacity: .7; }
+header .h-right { display: flex; align-items: center; gap: 12px; }
+.h-reset { background: rgba(255,255,255,.12); color: #fff; border: 1px solid rgba(255,255,255,.35); border-radius: 4px; padding: 4px 10px; font-size: 12px; font-family: inherit; cursor: pointer; }
+.h-reset:hover { background: rgba(255,255,255,.22); }
+
+.tabs { background: #fff; border-bottom: 1px solid var(--line); position: sticky; top: 0; z-index: 5; }
+.tabs .t-in { max-width: 1180px; margin: 0 auto; padding: 0 16px; display: flex; gap: 4px; overflow-x: auto; }
+.tab { flex: 1; min-width: 120px; padding: 12px 10px 10px; background: none; border: none; border-bottom: 3px solid transparent; font-family: inherit; font-size: 15px; color: var(--muted); cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; white-space: nowrap; }
+.tab:hover { color: var(--blue); background: #f5f7ff; }
+.tab.active { color: var(--blue); font-weight: bold; border-bottom-color: var(--orange); }
+.tab .tn { width: 22px; height: 22px; border-radius: 50%; background: #e4e8ff; color: var(--blue); font-size: 12px; font-weight: bold; display: inline-flex; align-items: center; justify-content: center; }
+.tab.active .tn { background: var(--blue); color: #fff; }
+.tab .prog { font-size: 11px; color: #99a3cc; font-weight: normal; }
+.tab .prog.all { color: var(--c3); font-weight: bold; }
+
+#wrap { max-width: 1180px; margin: 0 auto; padding: 16px; }
+.pane { display: none; grid-template-columns: minmax(0, 1fr) 340px; gap: 16px; }
+.pane.active { display: grid; }
+@media (max-width: 900px) { .pane.active { grid-template-columns: 1fr; } }
+
+.scene-card { align-self: start; background: var(--card); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+canvas { display: block; width: 100%; height: auto; touch-action: none; }
+.ctrls { padding: 12px 14px; border-top: 1px solid var(--line); display: flex; flex-direction: column; gap: 10px; }
+.row { display: flex; flex-wrap: wrap; gap: 8px 18px; align-items: center; }
+.sl { display: flex; align-items: center; gap: 10px; font-size: 14px; flex: 1 1 280px; }
+.sl .nm { min-width: 86px; font-weight: bold; color: var(--ink); }
+.sl input { flex: 1; accent-color: var(--blue); min-width: 100px; }
+.sl output { min-width: 100px; text-align: right; font-weight: bold; color: var(--blue); }
+.grp { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: 14px; }
+.grp .nm { font-weight: bold; margin-right: 4px; }
+.chip { padding: 5px 13px; border-radius: 20px; border: 1.5px solid #aabbee; background: #fff; color: var(--blue); font-size: 14px; cursor: pointer; font-family: inherit; }
+.chip:hover { background: #eef1ff; }
+.chip.active { background: var(--blue); color: #fff; border-color: var(--blue); }
+.btn { padding: 9px 22px; border: none; border-radius: 5px; font-size: 15px; font-weight: bold; font-family: inherit; cursor: pointer; transition: .15s; }
+.btn-primary { background: linear-gradient(135deg, #1144cc, #1a66ff); color: #fff; }
+.btn-primary:hover { background: linear-gradient(135deg, #0033bb, #1155ee); }
+.btn-primary:disabled { opacity: .35; cursor: default; }
+.btn-ghost { background: #e8ecff; color: var(--blue); border: 1px solid #aabbee; }
+.btn-ghost:hover { background: #d4dcff; }
+.spacer { flex: 1; }
+
+.guide { background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 16px 18px; align-self: start; }
+.g-title { font-size: 18px; font-weight: bold; color: var(--blue); margin-bottom: 6px; line-height: 1.4; }
+.g-lead { font-size: 14.5px; color: #333366; margin-bottom: 8px; }
+.how { font-size: 13.5px; color: var(--muted); background: #f5f7ff; border-radius: 6px; padding: 7px 10px; margin-bottom: 12px; }
+.how b { color: var(--ink); }
+.mis-h { font-size: 12.5px; color: var(--orange); font-weight: bold; letter-spacing: .1em; margin-bottom: 4px; }
+.mis { list-style: none; margin-bottom: 12px; }
+.mis li { display: flex; gap: 8px; align-items: flex-start; font-size: 14px; padding: 4px 0; color: #333366; }
+.mis li i { flex: 0 0 18px; height: 18px; margin-top: 3px; border-radius: 50%; border: 2px solid #c4ccee; font-style: normal; font-size: 11px; line-height: 14px; text-align: center; color: #fff; }
+.mis li.done { color: #7a86b0; }
+.mis li.done i { background: var(--c3); border-color: var(--c3); }
+.mis li.done i::before { content: '✓'; }
+.mis li .tip { display: block; font-size: 12.5px; color: var(--c3); }
+.mis li .tip[hidden] { display: none; }
+
+.result { background: #f5f8ff; border: 1px solid #c4ccee; border-radius: 6px; padding: 10px 14px; font-size: 14px; }
+.result .empty { color: var(--muted); font-size: 13.5px; }
+.result .calc { padding: 3px 0; }
+.result .calc span:first-child { display: block; font-size: 12.5px; color: var(--muted); }
+.result .calc .ans { display: block; font-weight: bold; color: var(--ink); text-align: right; font-size: 15px; }
+.result hr { border: none; border-top: 1px dashed #c4ccee; margin: 7px 0; }
+.result .q { color: var(--muted); font-size: 12.5px; }
+.result .k1 { color: var(--c1); } .result .k2 { color: var(--c2); } .result .k3 { color: var(--c3); }
+.big { display: block; font-size: 24px; font-weight: bold; color: var(--amber); text-align: center; margin: 6px 0 2px; line-height: 1.3; }
+.big small { font-size: 13px; color: #886622; font-weight: normal; display: block; margin-top: 4px; line-height: 1.5; }
+.fine { margin-top: 10px; font-size: 11.5px; color: #99a3c4; }
+.note { margin-top: 12px; background: #fff7e8; border-left: 3px solid var(--orange); padding: 8px 12px; font-size: 13px; color: #664400; border-radius: 0 4px 4px 0; }
+.log { margin-top: 12px; border-top: 1px solid var(--line); padding-top: 8px; }
+.log .lab { font-size: 12.5px; color: var(--muted); margin-bottom: 4px; }
+.log table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.log th { font-weight: normal; color: var(--muted); font-size: 12px; text-align: left; padding: 2px 4px; }
+.log td { padding: 3px 4px; border-bottom: 1px dashed var(--line); }
+.log td.ok { color: var(--c3); font-weight: bold; }
+footer { max-width: 1180px; margin: 4px auto 30px; padding: 0 16px; font-size: 12.5px; color: #8899bb; }
+#toast { position: fixed; left: 50%; bottom: 28px; transform: translateX(-50%) translateY(20px); background: #1a7a48; color: #fff; padding: 10px 20px; border-radius: 6px; font-size: 14.5px; opacity: 0; transition: .25s; pointer-events: none; max-width: 90vw; text-align: center; z-index: 20; }
+#toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+</style>
+<style>
+/* 式パネル：そのタブの式を主役として常に表示し、今の数字を代入して見せる */
+.formula { padding: 12px 16px 10px; border-bottom: 1px solid var(--line); background: #fbfcff; }
+.formula .fm { font-size: 26px; font-weight: bold; color: var(--ink); letter-spacing: .02em; line-height: 1.35; font-family: 'Cambria Math','Times New Roman','Yu Gothic UI',serif; }
+.formula .fn { font-size: 15px; color: #445; margin-top: 4px; font-family: Consolas,'Yu Gothic UI',monospace; }
+.formula .fn b { font-size: 16px; }
+.formula .fs { font-size: 13px; color: var(--muted); margin-top: 2px; }
+.v1 { color: var(--c1); } .v2 { color: var(--c2); } .v3 { color: var(--c3); } .vk { color: #8a4fd1; }
+.ok { color: var(--c3); font-weight: bold; }
+.ng { color: #c0392b; font-weight: bold; }
+.scene-tag { display: inline-block; font-size: 11.5px; font-weight: bold; color: #fff; background: var(--orange); border-radius: 3px; padding: 1px 7px; margin-bottom: 4px; letter-spacing: .05em; }
+</style>
+
+<style>
+.pred { display: flex; gap: 6px; margin: 4px 0 10px; }
+.pred button { flex: 1; padding: 8px 4px; border: 1.5px solid #aabbee; border-radius: 6px; background: #fff; font-family: inherit; font-size: 14px; cursor: pointer; color: var(--blue); }
+.pred button:hover { background: #eef1ff; }
+.pred button.picked { background: var(--blue); color: #fff; border-color: var(--blue); }
+.pred-a { font-size: 13.5px; color: var(--c3); font-weight: bold; margin: -4px 0 10px; }
+.pred-a[hidden] { display: none; }
+.log td.r { text-align: right; font-weight: bold; color: var(--amber); }
+.log td.x { text-align: right; color: #7a86b0; font-size: 12px; }
+</style>
+<body>
+<header><div class="h-in">
+  <div><div class="h-sub">和から ｜ 大人のための物理入門ガイド</div><div class="h-title">止まるまでの距離を測ってみよう</div></div>
+  <div class="h-right"><span class="h-note">シミュレーションアプリ（体験版）</span><button class="h-reset" id="reset-all">すべて最初から</button></div>
+</div></header>
+
+<main id="wrap">
+<section class="pane active" id="p1">
+  <div class="scene-card">
+    <canvas id="cvS"></canvas>
+    <canvas id="cvG"></canvas>
+    <div class="formula" id="fm" style="display:none;border-top:1px solid var(--line);border-bottom:none"></div>
+    <div style="padding:6px 14px;border-top:1px solid var(--line);display:none" id="fm-tg"><button class="btn btn-ghost" id="fm-btn" style="font-size:13px;padding:6px 14px">式で書くと（講師用）</button></div>
+    <div class="ctrls">
+      <div class="row">
+        <div class="grp"><span class="nm v1">速さ</span>
+          <button class="chip" data-v="20">時速20km</button><button class="chip active" data-v="40">時速40km</button><button class="chip" data-v="60">時速60km</button><button class="chip" data-v="80">時速80km</button></div>
+      </div>
+      <div class="row">
+        <div class="grp"><span class="nm v2">道路</span>
+          <button class="chip active" data-r="dry">乾いた道路</button><button class="chip" data-r="wet">雨の道路</button></div>
+        <span class="spacer"></span>
+        <button class="btn btn-primary" id="go">走ってブレーキ</button>
+        <button class="btn btn-ghost" id="clear">記録を消す</button>
+      </div>
+    </div>
+  </div>
+
+  <aside class="guide">
+    <span class="scene-tag">使われている場面</span>
+    <div class="g-title">速さが2倍になると、止まるまでの距離は何倍になる？</div>
+    <p class="g-lead">時速40kmと時速80kmで比べます。先に予想してから確かめます。</p>
+    <div class="pred" id="pred"><button data-p="2">2倍</button><button data-p="3">3倍</button><button data-p="4">4倍</button></div>
+    <div class="pred-a" id="pred-a" hidden></div>
+    <div class="how"><b>操作：</b>速さと道路を選んで「走ってブレーキ」。車は赤い線の位置でブレーキをかけます。止まった位置と「止まるまで ◯ m」、下のグラフにできる三角形を見てください。</div>
+    <div class="mis-h">やってみよう</div>
+    <ul class="mis" id="mis1">
+      <li data-k="a"><i></i><span>時速40km・乾いた道路で止める<span class="tip" hidden>止まるまで約9m</span></span></li>
+      <li data-k="b"><i></i><span>時速80km・乾いた道路で止めて、40kmと比べる<span class="tip" hidden>約36m で、40kmの4倍。速いと止まるまでの時間が長く（2倍）、しかもその間ずっと速い（2倍）。2倍が2回効くので、2 × 2 ＝ 4倍。グラフの三角形も、底辺（時間）と高さ（速さ）が両方2倍になっています</span></span></li>
+      <li data-k="c"><i></i><span>雨の道路で、同じ速さを試す<span class="tip" hidden>路面がすべりやすいと、1秒あたりに減らせる速さが小さくなります。止まるまでの時間が長くなる分、距離が伸びます</span></span></li>
+    </ul>
+    <div class="result" id="res"><div class="empty">「走ってブレーキ」を押すと、ここに計算が出ます。</div></div>
+    <div class="log" id="log" style="display:none"><div class="lab">これまでの記録</div>
+      <table><thead><tr><th>速さ</th><th>道路</th><th style="text-align:right">距離</th><th style="text-align:right">40kmとの比</th></tr></thead><tbody id="logb"></tbody></table></div>
+    <div class="note" id="insight" style="display:none"></div>
+    <p class="fine">※「40kmとの比」は、時速40km・乾いた道路との比です。ブレーキの強さは、乾いた道路 6.9 m/s²、雨の道路 4.9 m/s² として計算しています（タイヤと路面の摩擦係数 0.7・0.5 を想定）。実際の距離はタイヤの状態などで変わり、すり減ったタイヤでは雨の日に大きく伸びます。また実際に止まるまでには、ブレーキを踏むまでに進む距離（空走距離）も加わります。</p>
+  </aside>
+</section>
+</main>
+<footer>© 和から株式会社 ｜ 大人のための高校物理講座 第2回「加速度」で使うアプリと同じ仕組みの体験版です。</footer>
+<div id="toast"></div>
+
+<script>
+const $ = id => document.getElementById(id);
+const FONT = '"Segoe UI","Yu Gothic UI","Hiragino Sans","Meiryo",sans-serif';
+function setupCanvas(cv, w, h) { const d = Math.max(1, window.devicePixelRatio || 1); cv.width = w * d; cv.height = h * d; const c = cv.getContext('2d'); c.setTransform(d, 0, 0, d, 0, 0); return c; }
+function pill(c, text, x, y, o = {}) {
+  const size = o.size || 13, pad = 7;
+  c.save(); c.font = (o.bold === false ? '' : 'bold ') + size + 'px ' + FONT;
+  const w = c.measureText(text).width + pad * 2, h = size + 10;
+  let bx = o.align === 'right' ? x - w : o.align === 'center' ? x - w / 2 : x;
+  bx = Math.max(4, Math.min((o.maxX || 9999) - w - 4, bx));
+  c.fillStyle = o.bg || 'rgba(255,255,255,.93)'; c.strokeStyle = o.border || o.col || '#334477'; c.lineWidth = 1.2;
+  c.beginPath(); c.roundRect(bx, y - h / 2, w, h, 5); c.fill(); if (o.border !== 'none') c.stroke();
+  c.fillStyle = o.col || '#334477'; c.textAlign = 'left'; c.textBaseline = 'middle'; c.fillText(text, bx + pad, y + 1); c.restore();
+}
+let toastTimer;
+function toast(m) { const t = $('toast'); t.textContent = m; t.classList.add('show'); clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), 2800); }
+function done(k, msg) {
+  const li = document.querySelector('#mis1 li[data-k="' + k + '"]');
+  if (!li || li.classList.contains('done')) return;
+  li.classList.add('done'); const tip = li.querySelector('.tip'); if (tip) tip.hidden = false;
+  toast(msg || 'できました');
+}
+
+// ── 物理 ──
+const G = 9.8, ROAD = { dry: { mu: 0.7, name: '乾いた道路', col: '#16a05a' }, wet: { mu: 0.5, name: '雨の道路', col: '#2a66e8' } };
+const APPROACH = 1.0;                 // ブレーキ前に一定の速さで走る時間（秒）
+const S = { kmh: 40, road: 'dry', mode: 'idle', t: 0, runs: [], pred: null };
+function ms(kmh) { return kmh / 3.6; }
+function bOf(r) { return ROAD[r].mu * G; }
+function run(kmh, road) { const v = ms(kmh), b = bOf(road), tb = v / b; return { kmh, road, v, b, tb, x: v * tb / 2 }; }
+function base() { return run(40, 'dry').x; }
+
+// ── シーン ──
+const SW = 760, SH = 230, GW = 760, GH = 250;
+const cS = setupCanvas($('cvS'), SW, SH), cG = setupCanvas($('cvG'), GW, GH);
+const ROADY = 176, BRAKE_PX = 120, PXM = (SW - BRAKE_PX - 50) / 56;   // 1m あたりのピクセル
+function carX(r, t) {                  // ブレーキ位置を0とした車の先端の位置（m）
+  if (t < APPROACH) return -r.v * (APPROACH - t);
+  const tt = Math.min(t - APPROACH, r.tb); return r.v * tt - r.b * tt * tt / 2;
+}
+function carV(r, t) { if (t < APPROACH) return r.v; return Math.max(0, r.v - r.b * (t - APPROACH)); }
+const rain = Array.from({ length: 90 }, () => [Math.random() * SW, Math.random() * SH]);
+
+function drawScene() {
+  const c = cS, wet = S.road === 'wet';
+  const sky = c.createLinearGradient(0, 0, 0, ROADY);
+  sky.addColorStop(0, wet ? '#8e9bb2' : '#bcd4f4'); sky.addColorStop(1, wet ? '#b9c2d2' : '#e2eefc');
+  c.fillStyle = sky; c.fillRect(0, 0, SW, SH);
+  // 遠くの建物
+  c.fillStyle = wet ? '#9aa4b8' : '#c9d4e8';
+  [[20, 60], [70, 90], [130, 50], [180, 110], [250, 70], [320, 95], [390, 55], [450, 120], [520, 80], [590, 100], [660, 65], [710, 90]].forEach(([x, h]) => c.fillRect(x, ROADY - 28 - h, 44, h));
+  // 歩道・道路
+  c.fillStyle = wet ? '#8f96a3' : '#c2c7cf'; c.fillRect(0, ROADY - 28, SW, 28);
+  const road = c.createLinearGradient(0, ROADY, 0, SH);
+  road.addColorStop(0, wet ? '#3a3f4a' : '#555b66'); road.addColorStop(1, wet ? '#2a2e37' : '#454a54');
+  c.fillStyle = road; c.fillRect(0, ROADY, SW, SH - ROADY);
+  if (wet) { c.fillStyle = 'rgba(200,215,240,.18)'; for (let i = 0; i < 9; i++) c.fillRect(30 + i * 85, ROADY + 18, 46, 4); }
+  c.strokeStyle = '#f4f4f4'; c.lineWidth = 3; c.setLineDash([26, 18]);
+  c.beginPath(); c.moveTo(0, ROADY + 30); c.lineTo(SW, ROADY + 30); c.stroke(); c.setLineDash([]);
+  // 距離の目盛り（ブレーキ位置から）
+  c.fillStyle = wet ? '#dfe4ee' : '#ffffff'; c.font = '11px ' + FONT; c.textAlign = 'center'; c.textBaseline = 'top';
+  for (let m = 0; m <= 50; m += 10) { const x = BRAKE_PX + m * PXM; c.fillRect(x - 1, SH - 16, 2, 6); c.fillText(m + ' m', x, SH - 12 + 0 - 0 > 0 ? SH - 12 : SH - 12); }
+  // ブレーキの線
+  c.save(); c.strokeStyle = '#e8453a'; c.lineWidth = 2.5; c.setLineDash([6, 4]);
+  c.beginPath(); c.moveTo(BRAKE_PX, ROADY - 48); c.lineTo(BRAKE_PX, SH - 18); c.stroke(); c.restore();
+  pill(c, 'ここでブレーキ', BRAKE_PX, ROADY - 58, { align: 'center', col: '#c0392b', size: 12 });
+  // 過去に止まった位置
+  S.runs.forEach(r => {
+    const x = BRAKE_PX + r.x * PXM; if (x > SW - 4) return;
+    c.fillStyle = ROAD[r.road].col; c.fillRect(x - 1, ROADY + 4, 2, 22);
+    c.beginPath(); c.moveTo(x, ROADY + 4); c.lineTo(x + 12, ROADY + 9); c.lineTo(x, ROADY + 14); c.closePath(); c.fill();
+  });
+  // 車
+  const r = run(S.kmh, S.road), t = S.mode === 'idle' ? 0 : S.t;
+  const front = BRAKE_PX + carX(r, t) * PXM;
+  drawCar(c, front, ROADY + 14, S.mode === 'run' && t >= APPROACH && carV(r, t) > 0);
+  // 止まるまでの距離の括弧
+  if (S.mode === 'done') {
+    const x2 = front; c.save(); c.strokeStyle = '#cc8800'; c.fillStyle = '#cc8800'; c.lineWidth = 2;
+    const y = ROADY - 8; c.beginPath(); c.moveTo(BRAKE_PX, y - 6); c.lineTo(BRAKE_PX, y); c.lineTo(x2, y); c.lineTo(x2, y - 6); c.stroke(); c.restore();
+    pill(c, '止まるまで ' + r.x.toFixed(1) + ' m', (BRAKE_PX + x2) / 2, y - 18, { align: 'center', col: '#a86a00', size: 14, maxX: SW });
+  }
+  // 速度計
+  const v = S.mode === 'idle' ? r.v : carV(r, t);
+  pill(c, '時速 ' + (v * 3.6).toFixed(0) + ' km（' + v.toFixed(1) + ' m/s）', 12, 18, { col: '#1a33bb', size: 14 });
+  pill(c, ROAD[S.road].name, SW - 12, 18, { align: 'right', col: ROAD[S.road].col, size: 13 });
+  if (wet) { c.strokeStyle = 'rgba(230,238,255,.55)'; c.lineWidth = 1; rain.forEach(p => { c.beginPath(); c.moveTo(p[0], p[1]); c.lineTo(p[0] - 3, p[1] + 10); c.stroke(); }); }
+  if (S.mode === 'idle') pill(c, '速さと道路を選んで「走ってブレーキ」', SW / 2, 56, { align: 'center', col: '#334477', border: 'none', bold: false, size: 14 });
+}
+function drawCar(c, front, by, braking) {
+  const L = 4.4 * PXM, x = front - L;
+  if (front < -10) return;
+  c.save();
+  c.fillStyle = 'rgba(0,0,0,.25)'; c.beginPath(); c.ellipse(x + L / 2, by + 16, L / 2, 4, 0, 0, Math.PI * 2); c.fill();
+  c.fillStyle = '#e8663a'; c.beginPath(); c.roundRect(x, by - 14, L, 20, 5); c.fill();
+  c.beginPath(); c.moveTo(x + L * 0.22, by - 14); c.lineTo(x + L * 0.36, by - 30); c.lineTo(x + L * 0.72, by - 30); c.lineTo(x + L * 0.86, by - 14); c.closePath(); c.fill();
+  c.fillStyle = '#cfe3f7'; c.beginPath(); c.moveTo(x + L * 0.29, by - 15); c.lineTo(x + L * 0.39, by - 27); c.lineTo(x + L * 0.53, by - 27); c.lineTo(x + L * 0.53, by - 15); c.closePath(); c.fill();
+  c.beginPath(); c.moveTo(x + L * 0.57, by - 15); c.lineTo(x + L * 0.57, by - 27); c.lineTo(x + L * 0.70, by - 27); c.lineTo(x + L * 0.80, by - 15); c.closePath(); c.fill();
+  c.fillStyle = '#222'; [0.22, 0.78].forEach(f => { c.beginPath(); c.arc(x + L * f, by + 7, 7, 0, Math.PI * 2); c.fill(); });
+  c.fillStyle = '#bbb'; [0.22, 0.78].forEach(f => { c.beginPath(); c.arc(x + L * f, by + 7, 3, 0, Math.PI * 2); c.fill(); });
+  c.fillStyle = braking ? '#ff2a2a' : '#aa3322'; c.fillRect(x - 1, by - 10, 4, 6);
+  if (braking) { c.fillStyle = 'rgba(255,40,40,.35)'; c.beginPath(); c.arc(x, by - 7, 9, 0, Math.PI * 2); c.fill(); }
+  c.fillStyle = '#fff6c0'; c.fillRect(front - 3, by - 10, 3, 5);
+  c.restore();
+}
+
+// ── v-t グラフ ──
+const GL = 56, GR = 20, GT = 34, GB = 34, TMAX = APPROACH + 5.5, VMAX = 25;
+const gx = t => GL + t / TMAX * (GW - GL - GR), gy = v => GT + (1 - v / VMAX) * (GH - GT - GB);
+function drawGraph() {
+  const c = cG; c.fillStyle = '#fff'; c.fillRect(0, 0, GW, GH);
+  c.fillStyle = '#5566aa'; c.font = 'bold 13px ' + FONT; c.textAlign = 'left'; c.textBaseline = 'alphabetic';
+  c.fillText('速さと時間のグラフ　　色のついた三角形の面積 ＝ 止まるまでの距離', 12, 20);
+  c.strokeStyle = '#e4e8f6'; c.lineWidth = 1;
+  for (let t = 0; t <= TMAX + 1e-6; t += 0.5) { c.beginPath(); c.moveTo(gx(t), GT); c.lineTo(gx(t), GH - GB); c.stroke(); }
+  for (let v = 0; v <= VMAX; v += 5) { c.beginPath(); c.moveTo(GL, gy(v)); c.lineTo(GW - GR, gy(v)); c.stroke(); }
+  c.strokeStyle = '#8899bb'; c.lineWidth = 1.5; c.beginPath(); c.moveTo(GL, GT); c.lineTo(GL, GH - GB); c.lineTo(GW - GR, GH - GB); c.stroke();
+  c.fillStyle = '#7788aa'; c.font = '11px ' + FONT; c.textAlign = 'right';
+  for (let v = 0; v <= VMAX; v += 5) c.fillText(v, GL - 6, gy(v) + 4);
+  c.textAlign = 'center'; for (let t = 0; t <= TMAX + 1e-6; t += 1) c.fillText(t, gx(t), GH - GB + 16);
+  c.textAlign = 'left'; c.fillText('v（m/s）', GL + 6, GT + 12); c.textAlign = 'right'; c.fillText('時間 t（秒）', GW - GR, GH - 6);
+  // ブレーキの瞬間
+  c.save(); c.strokeStyle = '#e8453a'; c.setLineDash([5, 4]); c.lineWidth = 1.5; c.beginPath(); c.moveTo(gx(APPROACH), GT); c.lineTo(gx(APPROACH), GH - GB); c.stroke(); c.restore();
+  c.fillStyle = '#c0392b'; c.font = 'bold 11px ' + FONT; c.textAlign = 'left'; c.fillText('ブレーキ', gx(APPROACH) + 4, GT + 12);
+  // 過去の記録（薄く）
+  S.runs.forEach(r => {
+    const col = ROAD[r.road].col;
+    c.save(); c.globalAlpha = .18; c.fillStyle = col;
+    c.beginPath(); c.moveTo(gx(APPROACH), gy(0)); c.lineTo(gx(APPROACH), gy(r.v)); c.lineTo(gx(APPROACH + r.tb), gy(0)); c.closePath(); c.fill();
+    c.globalAlpha = .55; c.strokeStyle = col; c.lineWidth = 1.5;
+    c.beginPath(); c.moveTo(gx(0), gy(r.v)); c.lineTo(gx(APPROACH), gy(r.v)); c.lineTo(gx(APPROACH + r.tb), gy(0)); c.stroke(); c.restore();
+  });
+  if (S.mode === 'idle') return;
+  // 今回
+  const r = run(S.kmh, S.road), t = S.mode === 'done' ? APPROACH + r.tb : S.t, col = ROAD[S.road].col;
+  if (t > APPROACH) {
+    const te = Math.min(t, APPROACH + r.tb);
+    c.save(); c.globalAlpha = .38; c.fillStyle = col;
+    c.beginPath(); c.moveTo(gx(APPROACH), gy(0)); c.lineTo(gx(APPROACH), gy(r.v)); c.lineTo(gx(te), gy(carV(r, te))); c.lineTo(gx(te), gy(0)); c.closePath(); c.fill(); c.restore();
+  }
+  c.save(); c.strokeStyle = col; c.lineWidth = 3; c.beginPath(); c.moveTo(gx(0), gy(r.v));
+  const steps = 60; for (let i = 1; i <= steps; i++) { const tt = t * i / steps; c.lineTo(gx(tt), gy(carV(r, tt))); } c.stroke(); c.restore();
+  if (S.mode === 'done') {
+    pill(c, '高さ＝速さ ' + r.v.toFixed(1) + ' m/s', gx(APPROACH) - 6, gy(r.v / 2), { align: 'right', col: '#2a66e8', size: 12 });
+    pill(c, '底辺＝時間 ' + r.tb.toFixed(2) + ' 秒', gx(APPROACH + r.tb / 2), gy(0) - 14, { align: 'center', col: '#e8663a', size: 12 });
+    pill(c, '面積 ＝ ' + r.x.toFixed(1) + ' m', gx(APPROACH + r.tb) + 14, gy(r.v * 0.62), { col: '#a86a00', size: 13, maxX: GW });
+  }
+}
+
+// ── 式・結果 ──
+let showFm = false;
+function drawFormula() {
+  if (!S.runs.length) { $('fm').style.display = 'none'; $('fm-tg').style.display = 'none'; return; }
+  const r = S.runs[S.runs.length - 1];
+  $('fm-tg').style.display = ''; $('fm').style.display = showFm ? '' : 'none';
+  $('fm').innerHTML =
+    '<div class="fs" style="margin:0 0 2px;font-weight:bold;color:#5566aa">今の計算を式で書くと（グラフの三角形の面積）</div>' +
+    '<div class="fm" style="font-size:22px"><span class="v3">x</span> ＝ ½ × (<span class="v1">v</span> ÷ <span class="v2">b</span>) × <span class="v1">v</span></div>' +
+    '<div class="fn">½ × (<span class="v1">' + r.v.toFixed(1) + '</span> ÷ <span class="v2">' + r.b.toFixed(1) + '</span>) × <span class="v1">' + r.v.toFixed(1) + '</span> ＝ ½ × ' + r.tb.toFixed(2) + ' 秒 × ' + r.v.toFixed(1) + ' m/s ＝ <b class="v3">' + r.x.toFixed(1) + ' m</b></div>' +
+    '<div class="fs">止まるまでの距離 ＝ ½ ×（止まるまでの時間）×（速さ）。<span class="v1">v</span>：ブレーキ前の速さ、<span class="v2">b</span>：1秒あたりに減る速さ（ブレーキの強さ）</div>';
+}
+function drawResult() {
+  if (!S.runs.length) return;
+  const r = S.runs[S.runs.length - 1];
+  $('res').innerHTML =
+    '<div class="calc"><span class="k1">ブレーキ前の速さ（時速 ' + r.kmh + ' km）</span><span class="ans k1">' + r.v.toFixed(1) + ' m/s</span></div>' +
+    '<div class="calc"><span class="k2">ブレーキの強さ（' + ROAD[r.road].name + '）</span><span class="ans k2">1秒に ' + r.b.toFixed(1) + ' m/s ずつ遅くなる</span></div><hr>' +
+    '<div class="calc"><span>止まるまでの時間</span><span class="ans">' + r.tb.toFixed(2) + ' 秒</span></div>' +
+    '<div class="calc"><span>止まるまでの距離</span><span class="ans">速さ × 時間 ÷ 2</span></div>' +
+    '<span class="big">' + r.x.toFixed(1) + ' m<small>時速 ' + r.kmh + ' km・' + ROAD[r.road].name + '</small></span>';
+  $('log').style.display = '';
+  const b0 = base();
+  $('logb').innerHTML = S.runs.slice().reverse().map(q => '<tr><td>' + q.kmh + 'km</td><td style="color:' + ROAD[q.road].col + '">' + (q.road === 'dry' ? '乾いた' : '雨') + '</td><td class="r">' + q.x.toFixed(1) + ' m</td><td class="x">' + (q.x / b0).toFixed(2) + ' 倍</td></tr>').join('');
+  const has = (k, rd) => S.runs.some(q => q.kmh === k && q.road === rd);
+  if (has(40, 'dry') && has(80, 'dry')) {
+    $('insight').style.display = '';
+    $('insight').innerHTML = '<b>40km → 80km：</b>速さは 2 倍、止まるまでの距離は <b>' + (run(80, 'dry').x / b0).toFixed(1) + ' 倍</b>。<br>速いと止まるまでの時間が長く（2倍）、しかもその間ずっと速い（2倍）。2 倍が 2 回効くので、2 × 2 ＝ 4 倍です。グラフの三角形も、底辺（時間）と高さ（速さ）が両方 2 倍。' +
+      (has(60, 'dry') ? '<br>60km（速さ1.5倍）なら、1.5 × 1.5 で ' + (run(60, 'dry').x / b0).toFixed(2) + ' 倍。' : '');
+  }
+}
+function checkMissions(r) {
+  const has = (k, rd) => S.runs.some(q => q.kmh === k && q.road === rd);
+  if (r.kmh === 40 && r.road === 'dry') done('a', '時速40km・乾いた道路で約 ' + r.x.toFixed(0) + ' m');
+  if (has(40, 'dry') && has(80, 'dry')) {
+    done('b', '80kmは40kmの4倍の距離');
+    const a = $('pred-a'); a.hidden = false;
+    a.textContent = '答え：4倍（約9m → 約36m）' + (S.pred ? (S.pred === '4' ? '　予想どおりです' : '　予想は ' + S.pred + '倍でした') : '');
+  }
+  if (r.road === 'wet' && has(r.kmh, 'dry')) done('c', '雨の道路は、同じ速さで約 ' + (r.x / run(r.kmh, 'dry').x).toFixed(1) + ' 倍');
+}
+
+// ── 操作 ──
+let raf;
+function go() {
+  if (S.mode === 'run') return;
+  S.mode = 'run'; S.t = 0; $('go').disabled = true;
+  const r = run(S.kmh, S.road), T = APPROACH + r.tb;
+  let last = performance.now();
+  cancelAnimationFrame(raf);
+  (function tick(now) {
+    S.t = Math.min(T, S.t + (now - last) / 1000); last = now;
+    drawScene(); drawGraph();
+    if (S.t < T) raf = requestAnimationFrame(tick);
+    else {
+      S.mode = 'done'; $('go').disabled = false;
+      S.runs = S.runs.filter(q => !(q.kmh === r.kmh && q.road === r.road)); S.runs.push(r);
+      drawScene(); drawGraph(); drawResult(); drawFormula(); checkMissions(r);
+    }
+  })(last);
+}
+function redrawIdle() { if (S.mode !== 'run') { S.mode = 'idle'; } drawFormula(); drawScene(); drawGraph(); }
+document.querySelectorAll('[data-v]').forEach(b => b.onclick = () => { if (S.mode === 'run') return; document.querySelectorAll('[data-v]').forEach(x => x.classList.remove('active')); b.classList.add('active'); S.kmh = +b.dataset.v; redrawIdle(); });
+document.querySelectorAll('[data-r]').forEach(b => b.onclick = () => { if (S.mode === 'run') return; document.querySelectorAll('[data-r]').forEach(x => x.classList.remove('active')); b.classList.add('active'); S.road = b.dataset.r; redrawIdle(); });
+document.querySelectorAll('#pred button').forEach(b => b.onclick = () => { document.querySelectorAll('#pred button').forEach(x => x.classList.remove('picked')); b.classList.add('picked'); S.pred = b.dataset.p; });
+$('go').onclick = go;
+function clearAll() {
+  cancelAnimationFrame(raf); S.runs = []; S.mode = 'idle'; S.t = 0; S.pred = null; $('go').disabled = false;
+  $('res').innerHTML = '<div class="empty">「走ってブレーキ」を押すと、ここに計算が出ます。</div>';
+  $('log').style.display = 'none'; $('insight').style.display = 'none'; $('pred-a').hidden = true;
+  document.querySelectorAll('#pred button').forEach(x => x.classList.remove('picked'));
+  document.querySelectorAll('#mis1 li').forEach(li => { li.classList.remove('done'); const t = li.querySelector('.tip'); if (t) t.hidden = true; });
+  redrawIdle();
+}
+$('clear').onclick = () => { S.runs = []; $('log').style.display = 'none'; $('insight').style.display = 'none'; $('res').innerHTML = '<div class="empty">「走ってブレーキ」を押すと、ここに計算が出ます。</div>'; redrawIdle(); };
+$('reset-all').onclick = clearAll;
+$('fm-btn').onclick = () => { showFm = !showFm; $('fm-btn').textContent = showFm ? '式を隠す' : '式で書くと（講師用）'; drawFormula(); };
+redrawIdle();
+</script>
+</body>
+</html>
